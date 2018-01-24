@@ -12,7 +12,6 @@ import java.util.Map;
 public class SimModel {
 
     private Map<Integer, String> headers;
-    private Sheet myExcellSheet;
     private static final int ROW_HEADERS_INDEX  = 0;
     private static final int ID_COLUMN_INDEX = 0;
     private ArrayList<String> notIncludedHeaders;
@@ -35,7 +34,7 @@ public class SimModel {
 
         for (Sheet sheet : myExcelBook) {
 
-            myExcellSheet = sheet;
+            Sheet myExcellSheet = sheet;
             if (notIncludedSheets.contains(myExcellSheet.getSheetName())) continue;
             //if (!includedSheets.contains(myExcellSheet.getSheetName())) continue;
 

@@ -6,27 +6,27 @@ public class SimObjectProperty implements Serializable{
     private String Value;
     private boolean ref;
 
-    public String getName() {
+    String getName() {
         return Name;
     }
 
-    public void setName(String name) {
+    void setName(String name) {
         Name = name;
     }
 
-    public String getValue() {
+    String getValue() {
         return Value;
     }
 
-    public void setValue(String value) {
+    void setValue(String value) {
         Value = value;
     }
 
-    public boolean isRef() {
+    boolean isRef() {
         return ref;
     }
 
-    public void setRef(boolean ref) {
+    void setRef(boolean ref) {
         this.ref = ref;
     }
 
