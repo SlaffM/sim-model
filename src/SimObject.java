@@ -1,10 +1,15 @@
 import java.io.Serializable;
+import java.util.Hashtable;
 import java.util.Map;
 
 public class SimObject implements Serializable{
     private String Name;
     private String ID;
     private Map<Integer, SimObjectProperty> Properties;
+
+    SimObject(){
+        Properties = new Hashtable<Integer, SimObjectProperty>();
+    }
 
     String getName() {
         return Name;
@@ -26,10 +31,6 @@ public class SimObject implements Serializable{
         return Properties;
     }
 
-    void setProperties(Map<Integer, SimObjectProperty> properties) {
-        Properties = properties;
-    }
-
     void addProperty(int key, SimObjectProperty prop){
         Properties.put(key, prop);
     }
@@ -41,5 +42,17 @@ public class SimObject implements Serializable{
                 ", ID='" + ID + '\'' +
                 ", Properties=" + Properties.values() +
                 '}';
+    }
+
+    public String propertiesToString(){
+        SimObject simObject = this;
+        String result = "";
+        for (Map.Entry<Integer, SimObjectProperty> entry : simObject.getProperties().entrySet()){
+            result += entry.getValue().getName() + " = " + entry.getValue().getValue() + ", ";
+            //System.out.print(entry.getValue().getName() + " = " + entry.getValue().getValue() + ", ");
+        }
+        result += "\n";
+
+        return result;
     }
 }

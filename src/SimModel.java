@@ -24,26 +24,25 @@ public class SimModel {
 
     private void readFromExcel(String file) throws IOException {
 
-        XSSFWorkbook myExcelBook = new XSSFWorkbook(new FileInputStream(file));
-        FormulaEvaluator mainWorkbookEvaluator = myExcelBook.getCreationHelper().createFormulaEvaluator();
-        ArrayList<ArrayList<SimObject>> listGeneral = new ArrayList<ArrayList<SimObject>>();
+        XSSFWorkbook workbook = new XSSFWorkbook(new FileInputStream(file));
+        FormulaEvaluator formulaEvaluator = workbook.getCreationHelper().createFormulaEvaluator();
+        ArrayList<ArrayList<SimObject>> simObjectsCollection = new ArrayList<ArrayList<SimObject>>();
 
         buildNotIncludedHeaders();
         buildNotIncludedSheets();
         buildWithIncludedSheets();
 
-        for (Sheet sheet : myExcelBook) {
+        for (Sheet sheet : workbook) {
 
             if (notIncludedSheets.contains(sheet.getSheetName())) continue;
             //if (!includedSheets.contains(myExcellSheet.getSheetName())) continue;
 
 
-            ArrayList<SimObject> listObjectsOfClass = new ArrayList<SimObject>();
+            ArrayList<SimObject> simObjects = new ArrayList<SimObject>();
 
             for (Row rowData : sheet) {
 
-                SimObject rfd = new SimObject();
-                rfd.setProperties(new Hashtable<Integer, SimObjectProperty>());
+                SimObject simObject = new SimObject();
 
                 if (rowData.getRowNum() == ROW_HEADERS_INDEX) {
                     headers = buildHeaders(sheet);
@@ -56,24 +55,24 @@ public class SimModel {
 
                     if (indxSimObject == ID_COLUMN_INDEX) {
                         String sheetName = Formatter.GetFormattedSheetName(sheet.getSheetName());
-                        rfd.setName(sheetName);
-                        rfd.setID(dataCell.getStringCellValue());
+                        simObject.setName(sheetName);
+                        simObject.setID(dataCell.getStringCellValue());
                         continue;
                     }
 
                     if (headers.containsKey(indxSimObject)) {
-                        SimObjectProperty simObjectProperty = buildSimProperty(dataCell, mainWorkbookEvaluator);
-                        rfd.addProperty(indxSimObject, simObjectProperty);
+                        SimObjectProperty simObjectProperty = buildSimProperty(dataCell, formulaEvaluator);
+                        simObject.addProperty(indxSimObject, simObjectProperty);
                     }
                 }
-                listObjectsOfClass.add(rfd);
+                simObjects.add(simObject);
             }
 
-            listGeneral.add(listObjectsOfClass);
-            printAllObjects(listObjectsOfClass);
+            simObjectsCollection.add(simObjects);
+            printAllObjects(simObjects);
         }
-        myExcelBook.close();
-        XMLWriter.WriteXML(listGeneral, "./xls/mySIM.xml");
+        workbook.close();
+        XMLWriter.WriteXML(simObjectsCollection, "./xls/mySIM.xml");
     }
 
     private void buildNotIncludedHeaders(){
@@ -122,12 +121,12 @@ public class SimModel {
                 dataValue = dataCell.getStringCellValue();
                 break;
             case FORMULA:
-                String tempStr = Formatter.GetStringWithoutQuotes(workbookEvaluator.evaluate(dataCell).formatAsString());
-                if(tempStr.startsWith("_")){
-                    dataValue = "#" + tempStr;
+                String formulaValue = Formatter.GetStringWithoutQuotes(workbookEvaluator.evaluate(dataCell).formatAsString());
+                if(isValueRef(formulaValue)){
+                    dataValue = "#" + formulaValue;
                     ref = true;
                 }else{
-                    dataValue = tempStr;
+                    dataValue = formulaValue;
                 }
                 break;
             default:
@@ -147,11 +146,16 @@ public class SimModel {
 
             System.out.print(sObj.getName() + " - " + sObj.getID() + ": ");
 
+            //sObj.propertiesToString();
             for (Map.Entry<Integer, SimObjectProperty> entry : sObj.getProperties().entrySet()){
                 System.out.print(entry.getValue().getName() + " = " + entry.getValue().getValue() + ", ");
             }
             System.out.println("");
         }
+    }
+
+    private boolean isValueRef(String str){
+        return str.startsWith("_");
     }
 
 }
