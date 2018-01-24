@@ -34,22 +34,19 @@ public class SimModel {
 
         for (Sheet sheet : myExcelBook) {
 
-            Sheet myExcellSheet = sheet;
-            if (notIncludedSheets.contains(myExcellSheet.getSheetName())) continue;
+            if (notIncludedSheets.contains(sheet.getSheetName())) continue;
             //if (!includedSheets.contains(myExcellSheet.getSheetName())) continue;
 
 
             ArrayList<SimObject> listObjectsOfClass = new ArrayList<SimObject>();
 
-            //headers = new Hashtable<Integer, String>();
-
-            for (Row rowData : myExcellSheet) {
+            for (Row rowData : sheet) {
 
                 SimObject rfd = new SimObject();
                 rfd.setProperties(new Hashtable<Integer, SimObjectProperty>());
 
                 if (rowData.getRowNum() == ROW_HEADERS_INDEX) {
-                    headers = buildHeaders(myExcellSheet);
+                    headers = buildHeaders(sheet);
                     continue;
                 }
 
@@ -58,7 +55,7 @@ public class SimModel {
                     int indxSimObject = dataCell.getColumnIndex();
 
                     if (indxSimObject == ID_COLUMN_INDEX) {
-                        String sheetName = Formatter.GetFormattedSheetName(myExcellSheet.getSheetName());
+                        String sheetName = Formatter.GetFormattedSheetName(sheet.getSheetName());
                         rfd.setName(sheetName);
                         rfd.setID(dataCell.getStringCellValue());
                         continue;
@@ -125,7 +122,7 @@ public class SimModel {
                 dataValue = dataCell.getStringCellValue();
                 break;
             case FORMULA:
-                String tempStr = workbookEvaluator.evaluate(dataCell).formatAsString().replaceAll("\"", "");
+                String tempStr = Formatter.GetStringWithoutQuotes(workbookEvaluator.evaluate(dataCell).formatAsString());
                 if(tempStr.startsWith("_")){
                     dataValue = "#" + tempStr;
                     ref = true;
