@@ -23,7 +23,7 @@ public class SimModel {
            new SimModel().readFromExcel("./xls/sim_struct.xlsx");
     }
 
-    public void readFromExcel(String file) throws IOException {
+    private void readFromExcel(String file) throws IOException {
 
         XSSFWorkbook myExcelBook = new XSSFWorkbook(new FileInputStream(file));
         FormulaEvaluator mainWorkbookEvaluator = myExcelBook.getCreationHelper().createFormulaEvaluator();
@@ -59,7 +59,7 @@ public class SimModel {
                     int indxSimObject = dataCell.getColumnIndex();
 
                     if (indxSimObject == ID_COLUMN_INDEX) {
-                        String sheetName = Formatter.GetSheetName(myExcellSheet.getSheetName());
+                        String sheetName = Formatter.GetFormattedSheetName(myExcellSheet.getSheetName());
                         rfd.setName(sheetName);
                         rfd.setID(dataCell.getStringCellValue());
                         continue;
