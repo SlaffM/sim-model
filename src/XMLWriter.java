@@ -9,17 +9,21 @@ import java.util.Map;
 
 public class XMLWriter {
 
-    private static String file;
+    private String file;
+    private SimModel simModel;
 
-    public static void WriteXML(ArrayList<ArrayList<SimObject>> sheets, String file){
+    XMLWriter(SimModel simModel, String file){
+        this.simModel = simModel;
+        this.file = file;
+    }
 
-        setFile(file);
+    private Document createDocument(SimModel simModel, String file){
 
-        Element rootElement = new Element("root");
+        Element simRootElement = new Element("SimROOT");
 
-        for(ArrayList sheetClass : sheets) {
+        for(ArrayList simObjects : simModel.getList()) {
 
-            for (Object sObj : sheetClass) {
+            for (Object sObj : simObjects) {
 
                 SimObject simObject = (SimObject)sObj;
 
@@ -28,7 +32,7 @@ public class XMLWriter {
                 for (Map.Entry<Integer, SimObjectProperty> objProp : simObject.getProperties().entrySet()) {
                     SimObjectProperty simObjectProperty = objProp.getValue();
 
-                    String propertyName = simObjectProperty.getName().replaceAll(":", "_");
+                    String propertyName = Formatter.ReplaceColonOnUnderlining(simObjectProperty.getName());
                     Element elementProperty = new Element(propertyName);
 
                     if (simObjectProperty.isRef()) {
@@ -40,20 +44,25 @@ public class XMLWriter {
                     simElement.addContent(elementProperty);
                 }
 
-                rootElement.addContent(simElement);
+                simRootElement.addContent(simElement);
             }
         }
-        Document myDocument = new Document(rootElement);
-
-        printXml(myDocument);
+        Document myDocument = new Document(simRootElement);
+        return myDocument;
+        //writeDocument(myDocument);
     }
 
-    private static void printXml(Document document){
+    public void WriteModel(){
+        Document document = createDocument(this.getSimModel(), this.getFile());
+        writeDocument(document);
+    }
+
+    private void writeDocument(Document document){
         try {
-            XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
+            XMLOutputter xmlOutputter = new XMLOutputter(Format.getPrettyFormat());
 
             FileWriter writer = new FileWriter(file);
-            outputter.output(document, writer);
+            xmlOutputter.output(document, writer);
             writer.close();
 
         } catch (java.io.IOException e) {
@@ -61,7 +70,15 @@ public class XMLWriter {
         }
     }
 
-    private static void setFile(String file) {
-        XMLWriter.file = file;
+    private String getFile() {
+        return file;
+    }
+
+    private SimModel getSimModel() {
+        return simModel;
+    }
+
+    private void setSimModel(SimModel simModel) {
+        this.simModel = simModel;
     }
 }

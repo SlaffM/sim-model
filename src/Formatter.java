@@ -7,4 +7,7 @@ class Formatter {
     static String GetStringWithoutQuotes(String str){
         return str.replaceAll("\"", "");
     }
+
+    static String ReplaceColonOnUnderlining(String str) { return str.replaceAll(":", "_"); }
+
 }
