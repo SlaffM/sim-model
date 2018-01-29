@@ -1,10 +1,13 @@
+import com.sun.org.apache.xml.internal.utils.NameSpace;
 import org.jdom2.Document;
 import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.Map;
 
 public class XMLWriter {
@@ -19,7 +22,22 @@ public class XMLWriter {
 
     private Document createDocument(SimModel simModel, String file){
 
-        Element simRootElement = new Element("SimROOT");
+        Namespace rdf = Namespace.getNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+        Namespace cim = Namespace.getNamespace("cim", "http://iec.ch/TC57/2003/CIM-schema-cim10#");
+        Namespace pti = Namespace.getNamespace("pti", "http://www.pti-us.com/PTI_CIM-schema-cim10#");
+        Namespace fgc = Namespace.getNamespace("fgc", "http://fsk-ess.ru/cim-extension/2007/cimex10#");
+
+        Map<String, String> nsTable = new Hashtable<>();
+        nsTable.put(rdf.getPrefix(), rdf.getURI());
+        nsTable.put(cim.getPrefix(), cim.getURI());
+        nsTable.put(pti.getPrefix(), pti.getURI());
+        nsTable.put(fgc.getPrefix(), fgc.getURI());
+
+        Element simRootElement = new Element("RDF", rdf);
+        simRootElement.addNamespaceDeclaration(rdf);
+        simRootElement.addNamespaceDeclaration(cim);
+        simRootElement.addNamespaceDeclaration(pti);
+        simRootElement.addNamespaceDeclaration(fgc);
 
         for(ArrayList simObjects : simModel.getList()) {
 
@@ -27,18 +45,23 @@ public class XMLWriter {
 
                 SimObject simObject = (SimObject)sObj;
 
-                Element simElement = new Element(simObject.getName()).setAttribute("rdf_ID", simObject.getID());
+                ElementNameBuilder elementNameSimObject = new ElementNameBuilder(simObject.getName());
+                Namespace nsElemSimObj = Namespace.getNamespace(elementNameSimObject.getNS(), nsTable.get(elementNameSimObject.getNS()));
+
+                Element simElement = new Element(simObject.getName(), nsElemSimObj).setAttribute("ID", simObject.getID(), rdf);
 
                 for (Map.Entry<Integer, SimObjectProperty> objProp : simObject.getProperties().entrySet()) {
                     SimObjectProperty simObjectProperty = objProp.getValue();
 
-                    String propertyName = Formatter.ReplaceColonOnUnderlining(simObjectProperty.getName());
-                    Element elementProperty = new Element(propertyName);
+                    ElementNameBuilder elementNameProperty = new ElementNameBuilder(simObjectProperty.getName());
+                    Namespace nsElemProp = Namespace.getNamespace(elementNameProperty.getNS(), nsTable.get(elementNameProperty.getNS()));
+
+                    Element elementProperty = new Element(elementNameProperty.getName(), nsElemProp);
 
                     if (simObjectProperty.isRef()) {
-                        elementProperty.setAttribute("rdf_resource", simObjectProperty.getValue());
+                        elementProperty.setAttribute("resource", simObjectProperty.getValue(), rdf);
                     } else {
-                        elementProperty.setName(propertyName).addContent(simObjectProperty.getValue());
+                        elementProperty.setName(elementNameProperty.getName()).addContent(simObjectProperty.getValue());
                     }
 
                     simElement.addContent(elementProperty);
@@ -47,9 +70,7 @@ public class XMLWriter {
                 simRootElement.addContent(simElement);
             }
         }
-        Document myDocument = new Document(simRootElement);
-        return myDocument;
-        //writeDocument(myDocument);
+        return new Document(simRootElement);
     }
 
     public void WriteModel(){
@@ -76,9 +97,5 @@ public class XMLWriter {
 
     private SimModel getSimModel() {
         return simModel;
-    }
-
-    private void setSimModel(SimModel simModel) {
-        this.simModel = simModel;
     }
 }

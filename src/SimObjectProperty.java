@@ -1,6 +1,6 @@
 import java.io.Serializable;
 
-public class SimObjectProperty implements Serializable{
+class SimObjectProperty implements Serializable{
 
     private String Name;
     private String Value;

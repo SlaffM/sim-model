@@ -2,7 +2,7 @@ import java.io.Serializable;
 import java.util.Hashtable;
 import java.util.Map;
 
-public class SimObject implements Serializable{
+class SimObject implements Serializable{
     private String Name;
     private String ID;
     private Map<Integer, SimObjectProperty> Properties;
@@ -49,7 +49,6 @@ public class SimObject implements Serializable{
         String result = "";
         for (Map.Entry<Integer, SimObjectProperty> entry : simObject.getProperties().entrySet()){
             result += entry.getValue().getName() + " = " + entry.getValue().getValue() + ", ";
-            //System.out.print(entry.getValue().getName() + " = " + entry.getValue().getValue() + ", ");
         }
         result += "\n";
 

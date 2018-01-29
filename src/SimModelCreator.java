@@ -4,7 +4,8 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Map;
@@ -12,21 +13,25 @@ import java.util.Map;
 public class SimModelCreator {
 
     private Map<Integer, String> headers;
-    private static final int ROW_HEADERS_INDEX  = 0;
-    private static final int ID_COLUMN_INDEX = 0;
+    private final int ROW_HEADERS_INDEX  = 0;
+    private final int ID_COLUMN_INDEX = 0;
+    private final int ID_COLUMN_CLASS_INDEX = 1;
+
+    private static final String xlsFileModel = "./xls/sim_struct.xlsx";
+    private final String rdfFileModel = "./xls/mySIM.rdf";
+
     private ArrayList<String> notIncludedHeaders;
     private ArrayList<String> notIncludedSheets;
     private ArrayList<String> includedSheets;
 
     public static void main(String[] args) throws IOException {
-           new SimModelCreator().createSimModel("./xls/sim_struct.xlsx");
+           new SimModelCreator().createAndWriteSimModel(xlsFileModel);
     }
 
-    private void createSimModel(String file) throws IOException {
+    private void createAndWriteSimModel(String file) throws IOException {
         SimModel simModel = createModelFromExcel(file);
         writeSimModel(simModel);
     }
-
 
     private SimModel createModelFromExcel(String file) throws IOException {
 
@@ -41,40 +46,17 @@ public class SimModelCreator {
         for (Sheet sheet : workbook) {
 
             if (notIncludedSheets.contains(sheet.getSheetName())) continue;
-            //if (!includedSheets.contains(myExcellSheet.getSheetName())) continue;
 
-            ArrayList<SimObject> simObjects = new ArrayList<>();
+            ArrayList<SimObject> simObjects;
 
-            for (Row rowData : sheet) {
-
-                SimObject simObject = new SimObject();
-
-                if (rowData.getRowNum() == ROW_HEADERS_INDEX) {
-                    headers = buildHeaders(sheet);
-                    continue;
-                }
-
-                for (Cell dataCell : rowData) {
-
-                    int indxSimObject = dataCell.getColumnIndex();
-
-                    if (indxSimObject == ID_COLUMN_INDEX) {
-                        String sheetName = Formatter.GetFormattedSheetName(sheet.getSheetName());
-                        simObject.setName(sheetName);
-                        simObject.setID(dataCell.getStringCellValue());
-                        continue;
-                    }
-
-                    if (headers.containsKey(indxSimObject)) {
-                        SimObjectProperty simObjectProperty = buildSimProperty(dataCell, formulaEvaluator);
-                        simObject.addProperty(indxSimObject, simObjectProperty);
-                    }
-                }
-
-                simObjects.add(simObject);
+            if (sheet.getSheetName().equals("Head(1)")){
+                simObjects = buildSimObjectsFromHeadSheet(sheet, formulaEvaluator);
+            }else{
+                simObjects = buildSimObjectsFromStandartSheet(sheet, formulaEvaluator);
             }
 
-            simModel.addToList(simObjects);
+            simModel.addSimObjectsToModel(simObjects);
+
             printAllObjects(simObjects);
         }
         workbook.close();
@@ -82,8 +64,80 @@ public class SimModelCreator {
         return simModel;
     }
 
+    private ArrayList<SimObject> buildSimObjectsFromStandartSheet(Sheet sheet, FormulaEvaluator formulaEvaluator){
+        ArrayList<SimObject> simObjects = new ArrayList<>();
+        for (Row rowData : sheet) {
+
+            SimObject simObject = new SimObject();
+
+            if (rowData.getRowNum() == ROW_HEADERS_INDEX) {
+                headers = buildHeaders(rowData);
+                continue;
+            }
+
+            for (Cell dataCell : rowData) {
+
+                int indxSimObject = dataCell.getColumnIndex();
+
+                if (indxSimObject == ID_COLUMN_INDEX) {
+                    String sheetName = Formatter.GetFormattedSheetName(sheet.getSheetName());
+                    simObject.setName(sheetName);
+                    simObject.setID(dataCell.getStringCellValue());
+                    continue;
+                }
+
+                if (headers.containsKey(indxSimObject)) {
+                    SimObjectProperty simObjectProperty = buildSimProperty(dataCell, formulaEvaluator);
+                    simObject.addProperty(indxSimObject, simObjectProperty);
+                }
+            }
+
+            simObjects.add(simObject);
+        }
+
+        return simObjects;
+    }
+
+    private ArrayList<SimObject> buildSimObjectsFromHeadSheet(Sheet sheet, FormulaEvaluator formulaEvaluator){
+        ArrayList<SimObject> simObjects = new ArrayList<>();
+        for (Row rowData : sheet) {
+
+            SimObject simObject = new SimObject();
+
+            if (rowData.getRowNum() == ROW_HEADERS_INDEX) {
+                headers = buildHeaders(rowData); continue;
+            }
+
+            for (Cell dataCell : rowData) {
+
+                int indxSimObject = dataCell.getColumnIndex();
+
+                if (indxSimObject == ID_COLUMN_INDEX) {
+                    simObject.setID(dataCell.getStringCellValue());
+                    continue;
+                }
+
+                if(indxSimObject == ID_COLUMN_CLASS_INDEX){
+                    String className = Formatter.ReplaceColonOnUnderlining(dataCell.getStringCellValue());
+                    simObject.setName(className);
+                    continue;
+                }
+
+                if (headers.containsKey(indxSimObject)) {
+                    SimObjectProperty simObjectProperty = buildSimProperty(dataCell, formulaEvaluator);
+                    simObject.addProperty(indxSimObject, simObjectProperty);
+                }
+            }
+
+            simObjects.add(simObject);
+        }
+
+        return simObjects;
+    }
+
+
     private void writeSimModel(SimModel simModel){
-        XMLWriter xmlWriter = new XMLWriter(simModel, "./xls/mySIM.xml");
+        XMLWriter xmlWriter = new XMLWriter(simModel, rdfFileModel);
         xmlWriter.WriteModel();
     }
 
@@ -94,12 +148,13 @@ public class SimModelCreator {
         notIncludedHeaders.add("name_1");
         notIncludedHeaders.add("name_2");
         notIncludedHeaders.add("name_3");
+        notIncludedHeaders.add("class");
     }
 
     private void buildNotIncludedSheets(){
         notIncludedSheets = new ArrayList<>();
         notIncludedSheets.add("format_template");
-        notIncludedSheets.add("Head(1)");
+        //notIncludedSheets.add("Head(1)");
     }
 
     private void buildWithIncludedSheets(){
@@ -107,9 +162,8 @@ public class SimModelCreator {
         includedSheets.add("VoltageLevel(3)");
     }
 
-    private Hashtable<Integer, String> buildHeaders(Sheet sheet){
-        Row rowHeaders = sheet.getRow(ROW_HEADERS_INDEX);
-        Hashtable<Integer, String> headersLine = new Hashtable<Integer, String>();
+    private Hashtable<Integer, String> buildHeaders(Row rowHeaders){
+        Hashtable<Integer, String> headersLine = new Hashtable<>();
         for(Cell headerName : rowHeaders){
             if (!notIncludedHeaders.contains(headerName.getStringCellValue())){
                 headersLine.put(headerName.getColumnIndex(), headerName.getStringCellValue());
@@ -153,12 +207,14 @@ public class SimModelCreator {
         return simObjectProperty;
     }
 
-    private void printAllObjects(ArrayList<SimObject> listObjects){
-        for(SimObject sObj : listObjects) {
+    private void printAllObjects(ArrayList<SimObject> simObjects){
+        for(SimObject simObject : simObjects) {
 
-            System.out.print(sObj.getName() + " - " + sObj.getID() + ": ");
+            System.out.print(simObject.getName() + " - " + simObject.getID() + ": ");
 
-            for (Map.Entry<Integer, SimObjectProperty> entry : sObj.getProperties().entrySet()){
+            simObject.propertiesToString();
+
+            for (Map.Entry<Integer, SimObjectProperty> entry : simObject.getProperties().entrySet()){
                 System.out.print(entry.getValue().getName() + " = " + entry.getValue().getValue() + ", ");
             }
             System.out.println("");

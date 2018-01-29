@@ -12,11 +12,7 @@ public class SimModel {
         return list;
     }
 
-    public void setList(ArrayList<ArrayList<SimObject>> list) {
-        this.list = list;
-    }
-
-    public void addToList(ArrayList<SimObject> listOfSimObjects){
+    public void addSimObjectsToModel(ArrayList<SimObject> listOfSimObjects){
         list.add(listOfSimObjects);
     }
 }
