@@ -1,4 +1,3 @@
-import com.sun.org.apache.xml.internal.utils.NameSpace;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.Namespace;

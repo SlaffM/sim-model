@@ -5,6 +5,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -16,6 +17,11 @@ public class SimModelCreator {
     private final int ROW_HEADERS_INDEX  = 0;
     private final int ID_COLUMN_INDEX = 0;
     private final int ID_COLUMN_CLASS_INDEX = 1;
+    private final int ID_COLUMN_PE_PREFIX = 10;
+    private final int ID_COLUMN_MEAS_SET_PSR = 5;
+    private final int ID_COLUMN_MEAS_SRC_VARNAME = 10;
+
+
 
     private static final String xlsFileModel = "./xls/sim_struct.xlsx";
     private final String rdfFileModel = "./xls/mySIM.rdf";
@@ -39,9 +45,11 @@ public class SimModelCreator {
         FormulaEvaluator formulaEvaluator = workbook.getCreationHelper().createFormulaEvaluator();
         SimModel simModel = new SimModel();
 
-        buildNotIncludedHeaders();
-        buildNotIncludedSheets();
-        buildWithIncludedSheets();
+        Hashtable<String,String> hashtablePE = new Hashtable<>();
+
+        excludedHeaders();
+        excludedSheets();
+        //includedSheets();
 
         for (Sheet sheet : workbook) {
 
@@ -51,15 +59,32 @@ public class SimModelCreator {
 
             if (sheet.getSheetName().equals("Head(1)")){
                 simObjects = buildSimObjectsFromHeadSheet(sheet, formulaEvaluator);
-            }else{
+            }else if(sheet.getSheetName().equals("ProtectionEquipment(15)")){
+                simObjects = buildSimObjectsFromStandartSheet(sheet, formulaEvaluator);
+                hashtablePE = buildSimObjectsFromProtectionEquip(sheet);
+            }else if(sheet.getSheetName().equals("Measurement(16)")){
+                simObjects = buildSimObjectsFromStandartSheet(sheet, formulaEvaluator);
+                setColumnPsrMeasurement(sheet, hashtablePE);
+            }
+            else{
                 simObjects = buildSimObjectsFromStandartSheet(sheet, formulaEvaluator);
             }
 
             simModel.addSimObjectsToModel(simObjects);
 
-            printAllObjects(simObjects);
+            System.out.println(sheet.getSheetName() + " - " + simObjects.size());
+
+            //printAllObjects(simObjects);
         }
+
+
+        FileOutputStream fileOut = new FileOutputStream(file);
+
+        workbook.write(fileOut);
         workbook.close();
+        fileOut.flush();
+        fileOut.close();
+
 
         return simModel;
     }
@@ -135,29 +160,62 @@ public class SimModelCreator {
         return simObjects;
     }
 
+    private Hashtable buildSimObjectsFromProtectionEquip(Sheet sheet){
+
+        Hashtable<String,String> hashtable = new Hashtable<>();
+
+        for (Row rowData : sheet) {
+            if (rowData.getRowNum() == ROW_HEADERS_INDEX) {
+                continue;
+            }
+            hashtable.put(rowData.getCell(ID_COLUMN_INDEX).getStringCellValue(), rowData.getCell(ID_COLUMN_PE_PREFIX).getStringCellValue());
+        }
+        return hashtable;
+    }
+
+    private void setColumnPsrMeasurement(Sheet sheet, Hashtable hashtablePE){
+        for (Row rowData : sheet) {
+            if (rowData.getRowNum() == ROW_HEADERS_INDEX) {
+                continue;
+            }
+            String srcVariableName = rowData.getCell(ID_COLUMN_MEAS_SRC_VARNAME).getStringCellValue();
+
+            for(Object tagObj : hashtablePE.entrySet()){
+                Map.Entry<String,String> tagEntry = (Map.Entry<String,String>) tagObj;
+                String tag = tagEntry.getValue();
+                if (srcVariableName.startsWith(tag)){
+                    Cell cellRefPsr = rowData.getCell(ID_COLUMN_MEAS_SET_PSR);
+                    if(cellRefPsr == null){ cellRefPsr = rowData.createCell(ID_COLUMN_MEAS_SET_PSR); }
+                    cellRefPsr.setCellValue(tagEntry.getKey());
+                    break;
+                }
+            }
+        }
+    }
 
     private void writeSimModel(SimModel simModel){
         XMLWriter xmlWriter = new XMLWriter(simModel, rdfFileModel);
         xmlWriter.WriteModel();
     }
 
-    private void buildNotIncludedHeaders(){
+    private void excludedHeaders(){
         notIncludedHeaders = new ArrayList<>();
         notIncludedHeaders.add("id_1");
         notIncludedHeaders.add("id_2");
         notIncludedHeaders.add("name_1");
         notIncludedHeaders.add("name_2");
         notIncludedHeaders.add("name_3");
+        notIncludedHeaders.add("cim:TempCompareName");
         notIncludedHeaders.add("class");
     }
 
-    private void buildNotIncludedSheets(){
+    private void excludedSheets(){
         notIncludedSheets = new ArrayList<>();
         notIncludedSheets.add("format_template");
         //notIncludedSheets.add("Head(1)");
     }
 
-    private void buildWithIncludedSheets(){
+    private void includedSheets(){
         includedSheets = new ArrayList<>();
         includedSheets.add("VoltageLevel(3)");
     }
@@ -185,14 +243,16 @@ public class SimModelCreator {
                 break;
             case STRING:
                 dataValue = dataCell.getStringCellValue();
+                if(isValueRef(dataValue)){
+                    dataValue = "#" + dataValue;
+                    ref = true;
+                }
                 break;
             case FORMULA:
-                String formulaValue = Formatter.GetStringWithoutQuotes(workbookEvaluator.evaluate(dataCell).formatAsString());
-                if(isValueRef(formulaValue)){
-                    dataValue = "#" + formulaValue;
+                dataValue = Formatter.GetStringWithoutQuotes(workbookEvaluator.evaluate(dataCell).formatAsString());
+                if(isValueRef(dataValue)){
+                    dataValue = "#" + dataValue;
                     ref = true;
-                }else{
-                    dataValue = formulaValue;
                 }
                 break;
             default:
